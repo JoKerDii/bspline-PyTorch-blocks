@@ -1,6 +1,16 @@
 # BSplineLayer
 
-This is a customized PyTorch Layer using B-spline transformation. It can be easily incorporated into any neural network architecture in PyTorch. Both CPU and GPU are supported.
+This is a customized PyTorch Layer using B-spline transformation. It can be easily incorporated into any neural network architecture in PyTorch. 
+
+
+
+## Illustration
+
+Sorry for the stupid demonstration below, but this is basically what BSplineLayer is and how it works. Both CPU and GPU are supported. I will be working on generalizing and improving this little layer. I will also try out to build a BSpline Activation Function.
+
+Plus, combining BSplineLayer with any activation function (e.g. ReLU or Sigmoid) is not recommended, since B-spline is already adding pretty much non-linearity into the model.
+
+<p align="center"><img  src="demo.png" width="100%"></p>
 
 
 
@@ -31,12 +41,11 @@ class BSpline_MLP(nn.Module):
         self.output = 1 # a regression problem
         self.bs = BSplineLayer(in_features=self.in_channels) # use default values for other arguments
         self.fc1 = nn.Linear(self.in_channels * self.readlength, self.output)
-        self.relu = torch.nn.ReLU()
 
     def forward(self, input):
-        x = self.relu(self.bs(input))  # （N, L, C）
+        x = self.bs(input)  # （N, L, C）
         x = x.reshape((x.shape[0], x.shape[1] * x.shape[2]))  # (N, L * C)
-        x = self.relu(self.fc1(x))  # (N, 1)
+        x = self.fc1(x)  # (N, 1)
         return x
 ```
 
@@ -46,7 +55,7 @@ class BSpline_MLP(nn.Module):
 
 python 3.8
 
-pytorch 1.7.0
+PyTorch 1.7.0
 
 
 
