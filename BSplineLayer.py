@@ -34,7 +34,15 @@ class BSplineLayer(nn.Module):
 
     """
 
-    def __init__(self, in_features: int, out_features: int = None, n_bases: int = 5, shared_weights: bool = False, bias: bool = True, weighted_sum=True):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int = None,
+        n_bases: int = 5,
+        shared_weights: bool = False,
+        bias: bool = True,
+        weighted_sum=True,
+    ):
         super(BSplineLayer, self).__init__()
         self.n_bases = n_bases
         # self.inp_shape = None  # 4
@@ -47,16 +55,20 @@ class BSplineLayer(nn.Module):
             self.out_features = out_features
         self.shared_weights = shared_weights
         if self.shared_weights:
-            self.weight = Parameter(torch.Tensor(
-                self.n_bases, 1), requires_grad=True)
+            self.weight = Parameter(torch.Tensor(self.n_bases, 1), requires_grad=True)
         else:
-            self.weight = Parameter(torch.Tensor(
-                self.n_bases, self.in_features), requires_grad=True)
+            self.weight = Parameter(
+                torch.Tensor(self.n_bases, self.in_features), requires_grad=True
+            )
         if bias:
-            self.bias = Parameter(torch.Tensor(
-                self.out_features,), requires_grad=True)
+            self.bias = Parameter(
+                torch.Tensor(
+                    self.out_features,
+                ),
+                requires_grad=True,
+            )
         else:
-            self.register_parameter('bias', None)
+            self.register_parameter("bias", None)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -76,7 +88,8 @@ class BSplineLayer(nn.Module):
 
         if self.weighted_sum:
             return self.shrunk_hidden_basis_layer(
-                expanded_features, self.weight, self.bias)
+                expanded_features, self.weight, self.bias
+            )
         else:
             return expanded_features.reshape((N, L, -1))
 
@@ -84,15 +97,16 @@ class BSplineLayer(nn.Module):
         """
         input should be of the shape (batch size, length, channal/feature)
         can be the output of BSpline Layer, depending on the 'weighted_sum'
-        argument. 
+        argument.
         """
         cuda = False
         if input.is_cuda:
             cuda = True
         expanded_features = EncodeSplines(n_bases=self.n_bases).fit_transform(
-            input)  # need import that class
+            input
+        )  # need import that class
         if cuda:
-            return expanded_features.to('cuda')
+            return expanded_features.to("cuda")
         else:
             return expanded_features
 
@@ -103,8 +117,7 @@ class BSplineLayer(nn.Module):
         # if weights are shared
         if self.shared_weights:
             if bias != None:
-                out = torch.add(
-                    bias, (torch.squeeze(input.matmul(weight), -1)))
+                out = torch.add(bias, (torch.squeeze(input.matmul(weight), -1)))
                 return out
             else:
                 return torch.squeeze(input.matmul(weight), -1)
@@ -115,7 +128,7 @@ class BSplineLayer(nn.Module):
             # transpose: put feature/channel (-2) to the front
             # permute: # (2, 0, 1, 3) when N = 4
             # torch.Size([4, 100, 162, 10])
-            out = input.permute((N-2,) + tuple(range(N-2)) + (N-1,))
+            out = input.permute((N - 2,) + tuple(range(N - 2)) + (N - 1,))
             if bias != None:
                 output = torch.add(bias, corr2d_stack(out, weight))
                 return output
@@ -123,7 +136,7 @@ class BSplineLayer(nn.Module):
                 return corr2d_stack(out, weight)
 
     def extra_repr(self):
-        return 'in_features={}, out_features={}, bias={}'.format(
+        return "in_features={}, out_features={}, bias={}".format(
             self.in_features, self.out_features, self.bias is not None
         )
 
@@ -159,8 +172,9 @@ if __name__ == "__main__":
 
     # cube_tensor = torch.tensor(cube)
 
-    m = BSplineLayer(4, 4, n_bases=6, shared_weights=True,
-                     bias=False, weighted_sum=False)
+    m = BSplineLayer(
+        4, 4, n_bases=6, shared_weights=True, bias=False, weighted_sum=False
+    )
     # (batch size, length, channel, basis functions)
     input = torch.randn(100, 162, 4)
     output = m(input)

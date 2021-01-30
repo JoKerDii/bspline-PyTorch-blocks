@@ -17,16 +17,16 @@ class EncodeSplines(object):
         L: length / number of features
         n_bases: number of basis functions
 
-    # Arguments
+    # Args
         n_bases: int; Number of basis functions.
         degree: int; 2 for quadratic, 3 for qubic splines
         share_knots: bool; if True, the spline knots are
             shared across all the features (last-dimension)
 
     # Methods
-        fit: Calculate the knot placement from the values ranges.
-        transform: Obtain the transformed values
-        fit_transform: fit and transform.
+        **fit**: Calculate the knot placement from the values ranges.
+        **transform**: Obtain the transformed values
+        **fit_transform**: fit and transform.
     """
 
     def __init__(self, n_bases=5, degree=3, share_knots=False):
@@ -38,7 +38,7 @@ class EncodeSplines(object):
 
     def fit(self, x):
         """Calculate the knot placement from the values ranges.
-        # Arguments
+        # Args
             x: torch.tensor, either N x D or N x L x D dimensional.
         """
         assert x.ndim > 1
@@ -50,22 +50,24 @@ class EncodeSplines(object):
             self.data_max_[:] = torch.amax(self.data_max_)
 
     def transform(self, x, warn=True):
-        """Obtain the transformed values
-        """
+        """Obtain the transformed values"""
         # 1. split across last dimension
         # 2. re-use ranges
         # 3. Merge
-        array_list = [encodeSplines(x[..., i].reshape((-1, 1)),
-                                    n_bases=self.n_bases,
-                                    spline_order=self.degree,
-                                    warn=warn,
-                                    start=self.data_min_[i],
-                                    end=self.data_max_[i]).reshape(x[..., i].shape + (self.n_bases,))
-                      for i in range(x.shape[-1])]
+        array_list = [
+            encodeSplines(
+                x[..., i].reshape((-1, 1)),
+                n_bases=self.n_bases,
+                spline_order=self.degree,
+                warn=warn,
+                start=self.data_min_[i],
+                end=self.data_max_[i],
+            ).reshape(x[..., i].shape + (self.n_bases,))
+            for i in range(x.shape[-1])
+        ]
         return torch.stack(array_list, axis=-2)
 
     def fit_transform(self, x):
-        """Fit and transform.
-        """
+        """Fit and transform."""
         self.fit(x)
         return self.transform(x)

@@ -1,22 +1,36 @@
-# BSplineLayer
+# BSpline PyTorch Blocks
 
-This is a customized PyTorch Layer using B-spline transformation. It can be easily incorporated into any neural network architecture in PyTorch. 
+A customized PyTorch Layer and a customized PyTorch Activation Function using B-spline transformation. They can be easily incorporated into any neural network architecture in PyTorch. Both CPU and GPU are supported.
 
 
 
-## Illustration
+## B-Spline Layer
 
-Sorry for the stupid demonstration below, but this is basically what BSplineLayer is and how it works. Both CPU and GPU are supported. I will be working on generalizing and improving this little layer. I will also try out to build a BSpline Activation Function.
+BSpline Layer consists of two steps: B-spline expansion and weighted summation. The shape of input could be (N, L, *, C). The shape of output is (N, L, *, C, n_bases). Plus, combining B-Spline Layer with any activation function (e.g. ReLU or Sigmoid) is not recommended, since B-spline is already adding pretty much non-linearity into the model.
 
-Plus, combining BSplineLayer with any activation function (e.g. ReLU or Sigmoid) is not recommended, since B-spline is already adding pretty much non-linearity into the model.
+Implemented in:
 
-<p align="center"><img  src="demo.png" width="100%"></p>
+* BSpline.py
+* BSplineLayer.py
+* EncodeSplines.py
+* helper.py
+
+
+
+## B-Spline Activation Function
+
+B-Spline Activation Function consists of forward and backward computation applying [De Boor algorithm](https://en.wikipedia.org/wiki/De_Boor%27s_algorithm). The shape of input could be (N, C) or (N, C, H, W) from `nn.linear()` or `nn.conv2d` respectively. Any other shape of input is doable if the tensor is reshaped properly before the activation.
+
+Implemented in:
+
+* BSplineActivation.py
+* BSplineActivationFunc.py
 
 
 
 ## Example
 
-A simplest example:
+A simplest example of using B-Spline Layer:
 
 ```python
 import torch
@@ -27,7 +41,7 @@ output = m(input)
 print(output.size())
 ```
 
-An MLP example:
+An MLP example of using B-Spline Layer:
 
 ```python
 import torch
@@ -48,6 +62,75 @@ class BSpline_MLP(nn.Module):
         x = self.fc1(x)  # (N, 1)
         return x
 ```
+
+
+
+A simplest example of using B-Spline Activation Function:
+
+```python
+m = BSplineActivation(num_activations=4)
+input = torch.randn((4,4,5,5))
+output = m(input)
+```
+
+
+
+An MLP example of using B-Spline Activation Function:
+
+```python
+class MLP(nn.Module):
+    def __init__(self, config):
+        super(MLP, self).__init__()
+        self.fc1 = nn.Linear(784, 256)  # (N, 28 * 28) -> (N, 256)
+        self.fc2 = nn.Linear(256, 128)  # -> (N, 128)
+        self.fc3 = nn.Linear(128, 64)  # -> (N, 64)
+        self.fc4 = nn.Linear(64, 10)  # -> (N, 10)
+        self.a1 = BSplineActivation(num_activations=256,
+                                    mode='linear', device=config.device)
+        self.a2 = torch.nn.ReLU()
+        
+    def forward(self, x):
+        x = x.view(x.shape[0], -1)
+        x = self.a1(self.fc1(x))
+        x = self.a2(self.fc2(x))
+        x = self.a2(self.fc3(x))
+        x = F.log_softmax(self.fc4(x), dim=1)
+        return x
+```
+
+
+
+An CNN example of using B-Spline Activation Function:
+
+```python
+class CNN(nn.Module):
+    def __init__(self, config):
+        super(CNN, self).__init__()
+        self.c1 = 6
+        self.conv1 = nn.Conv2d(1, self.c1, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(self.c1 * 12 * 12, 512)  # 864
+        self.fc2 = nn.Linear(512, 128)
+        self.fc3 = nn.Linear(128, 64)
+        self.fc4 = nn.Linear(64, 10)
+        self.a1 = BSplineActivation(
+            num_activations=self.c1, device=config.device)
+        self.a2 = torch.nn.ReLU()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.a1(x)
+        x = self.pool(x)
+        x = x.view(-1, self.c1 * 12 * 12)
+        x = self.a2(self.fc1(x))
+        x = self.a2(self.fc2(x))
+        x = self.a2(self.fc3(x))
+        x = F.log_softmax(self.fc4(x), dim=1)
+
+        return x
+```
+
+Please see test_af.py
 
 
 
