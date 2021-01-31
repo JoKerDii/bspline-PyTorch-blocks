@@ -129,24 +129,28 @@ class BSplineActivation(nn.Module):
 
     def reshape_forward(self, input):
         input_size = input.size()
-        if self.mode == "linear":
-            if len(input_size) == 2:
-                # one activation per conv channel
-                x = input.view(
-                    *input_size, 1, 1
-                )  # transform to 4D size (N, num_units=num_activations, 1, 1)
-            elif len(input_size) == 4:
-                # one activation per conv output unit
-                x = input.view(input_size[0], -1).unsqueeze(-1).unsqueeze(-1)
-            else:
-                raise ValueError(
-                    f"input size is {len(input_size)}D but should be 2D or 4D..."
-                )
+
+        if len(input_size) == 2:
+            # one activation per conv channel
+            x = input.view(
+                *input_size, 1, 1
+            )  # transform to 4D size (N, num_units=num_activations, 1, 1)
+        elif len(input_size) == 3:
+            x = input.view(input.size()[0], input.size()[
+                1], 1, input.size()[2])
+        elif len(input_size) == 4:
+            # one activation per conv output unit
+            x = input.view(input_size[0], -1).unsqueeze(-1).unsqueeze(-1)
         else:
-            assert (
-                len(input_size) == 4
-            ), 'input to activation should be 4D (N, C, H, W) if mode="conv".'
-            x = input
+            raise ValueError(
+                f"input size is {len(input_size)}D but should be 2D or 4D..."
+            )
+
+        assert (
+            len(x.shape) == 4
+        ), 'input to activation should be 2D or 3D or 4D.'
+
+        # x = input
         return x
 
     def reshape_back(self, output, input_size):
@@ -159,7 +163,7 @@ class BSplineActivation(nn.Module):
     def forward(self, input):
         """
         Args:
-            input : 2D/4D tensor
+            input : 2D/3D/4D tensor
         """
         # len(self.spline_size) == 1:
 
