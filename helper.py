@@ -15,11 +15,11 @@ def get_knots(start, end, n_bases=5, spline_order=3):
     end = end + x_range * 0.001
     # mgcv annotation
     m = spline_order - 1
-    nk = n_bases - m    # number of interior knots
+    nk = n_bases - m  # number of interior knots
     dknots = (end - start) / (nk - 1)
-    knots = torch.linspace(start=start - dknots * (m + 1),
-                           end=end + dknots * (m + 1),
-                           steps=nk + 2 * m + 2)
+    knots = torch.linspace(
+        start=start - dknots * (m + 1), end=end + dknots * (m + 1), steps=nk + 2 * m + 2
+    )
     return knots.float()
 
 
@@ -43,11 +43,11 @@ def get_X_spline(x, knots, n_bases=5, spline_order=3, add_intercept=True):
         vec[i] = 1.0
         tck[1] = vec
         if cuda:
-            X[:, i] = torch.from_numpy(
-                si.splev(x, tck, der=0)).to('cuda')  # TODO: specify cuda number
+            X[:, i] = torch.from_numpy(si.splev(x, tck, der=0)).to(
+                "cuda"
+            )  # TODO: specify cuda number
         else:
-            X[:, i] = torch.from_numpy(
-                si.splev(x, tck, der=0))
+            X[:, i] = torch.from_numpy(si.splev(x, tck, der=0))
     if add_intercept is True:
         ones = torch.ones_like(X[:, :1])
         X = torch.hstack([ones, X])
@@ -79,8 +79,7 @@ def get_S(n_bases=5, spline_order=3, add_intercept=True):
 
 
 def _trunc(x, minval=None, maxval=None):
-    """Truncate vector values to have values on range [minval, maxval]
-    """
+    """Truncate vector values to have values on range [minval, maxval]"""
     x = torch.clone(x)
     if minval != None:
         x[x < minval] = minval
@@ -91,8 +90,8 @@ def _trunc(x, minval=None, maxval=None):
 
 def encodeSplines(x, n_bases=5, spline_order=3, start=None, end=None, warn=True):
     """Function for the class `EncodeSplines`.
-    Expansion by generating B-spline basis functions for each x 
-    and each n (spline-index) with `scipy.interpolate.splev`, 
+    Expansion by generating B-spline basis functions for each x
+    and each n (spline-index) with `scipy.interpolate.splev`,
     based on the pre-placed equidistant knots on [start, end] range.
 
     # Arguments
@@ -116,7 +115,8 @@ def encodeSplines(x, n_bases=5, spline_order=3, start=None, end=None, warn=True)
         if x.min() < start:
             if warn:
                 print(
-                    "WARNING, x.min() < start for some elements. Truncating them to start: x[x < start] = start")
+                    "WARNING, x.min() < start for some elements. Truncating them to start: x[x < start] = start"
+                )
             x = _trunc(x, minval=start)
     if end is None:
         end = torch.amax(x)  # should be np.nanmax
@@ -124,12 +124,10 @@ def encodeSplines(x, n_bases=5, spline_order=3, start=None, end=None, warn=True)
         if x.max() > end:
             if warn:
                 print(
-                    "WARNING, x.max() > end for some elements. Truncating them to end: x[x > end] = end")
+                    "WARNING, x.max() > end for some elements. Truncating them to end: x[x > end] = end"
+                )
             x = _trunc(x, maxval=end)
-    bs = BSpline(start, end,
-                 n_bases=n_bases,
-                 spline_order=spline_order
-                 )
+    bs = BSpline(start, end, n_bases=n_bases, spline_order=spline_order)
 
     # concatenate x to long
     assert len(x.shape) == 2

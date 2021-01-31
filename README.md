@@ -19,7 +19,7 @@ Implemented in:
 
 ## B-Spline Activation Function
 
-B-Spline Activation Function consists of forward and backward computation applying [De Boor algorithm](https://en.wikipedia.org/wiki/De_Boor%27s_algorithm). The shape of input could be (N, C) or (N, C, H, W) from `nn.linear()` or `nn.conv2d` respectively. Any other shape of input is doable if the tensor is reshaped properly before the activation.
+B-Spline Activation Function consists of forward and backward computation applying [De Boor algorithm](https://en.wikipedia.org/wiki/De_Boor%27s_algorithm). The shape of input could be (N, C) or (N, C, H, W) from `nn.Linear()` or `nn.Conv2d` respectively. Any other shape of input is doable if the tensor is reshaped properly before the activation.
 
 Implemented in:
 
@@ -79,14 +79,14 @@ An MLP example of using B-Spline Activation Function:
 
 ```python
 class MLP(nn.Module):
-    def __init__(self, config):
+    def __init__(self):
         super(MLP, self).__init__()
         self.fc1 = nn.Linear(784, 256)  # (N, 28 * 28) -> (N, 256)
         self.fc2 = nn.Linear(256, 128)  # -> (N, 128)
         self.fc3 = nn.Linear(128, 64)  # -> (N, 64)
         self.fc4 = nn.Linear(64, 10)  # -> (N, 10)
         self.a1 = BSplineActivation(num_activations=256,
-                                    mode='linear', device=config.device)
+                                    mode='linear', device='cuda:0')
         self.a2 = torch.nn.ReLU()
         
     def forward(self, x):
@@ -104,7 +104,7 @@ An CNN example of using B-Spline Activation Function:
 
 ```python
 class CNN(nn.Module):
-    def __init__(self, config):
+    def __init__(self):
         super(CNN, self).__init__()
         self.c1 = 6
         self.conv1 = nn.Conv2d(1, self.c1, 5)
@@ -114,7 +114,7 @@ class CNN(nn.Module):
         self.fc3 = nn.Linear(128, 64)
         self.fc4 = nn.Linear(64, 10)
         self.a1 = BSplineActivation(
-            num_activations=self.c1, device=config.device)
+            num_activations=self.c1, device='cuda:0')
         self.a2 = torch.nn.ReLU()
 
     def forward(self, x):

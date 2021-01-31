@@ -16,9 +16,9 @@ class BSplineActivation(nn.Module):
 
     # Args
         mode: either 'linear' or 'conv', depending on the input of activation function
-        size: odd integer, spline size
-        grid: grid size
-        num_activations: integer number of neurons 
+        size: odd integer, spline size / number of basis functions
+        grid: grid spacing
+        num_activations: integer number of neurons
         device: 'cpu' or 'gpu'
         dtype: tensor type
 
@@ -27,7 +27,6 @@ class BSplineActivation(nn.Module):
         **init_zero_knot_indexes**: initialize indexes of zero knots of each activation.
         **reshape_forward**, **reshape_back**: make sure the shapes of input and output of the activation function are correct (2D or 4D tensor).
         **forward**: calculate the spline functions.
-        **backward**: calculate the derivative of spline functions and coefficients.
 
     # Example:
         >>> m = BSplineActivation(num_activations=4)
@@ -38,7 +37,7 @@ class BSplineActivation(nn.Module):
     def __init__(
         self,
         mode="conv",
-        size=51,
+        size=5,
         grid=0.1,
         num_activations=None,
         device="cpu",
@@ -57,12 +56,28 @@ class BSplineActivation(nn.Module):
         super().__init__()
 
         self.mode = mode
-        self.size = size
+        self.size = size  # number of basis function
         self.num_activations = num_activations
         self.device = device
         self.dtype = dtype
         self.grid = Tensor([grid]).to(**self.device_type)
         self.init_zero_knot_indexes()  # index of knot 0 for each filter/ neuron
+        self.spline_size = [self.size]
+        self.spline_range = 2  # TODO: should be a reasonable value!
+        # a helper function
+
+        def spline_grid_from_range(spline_size, range_=2, round_to=1e-6):
+            """ Compute spline grid spacing from desired one-side range
+            and the number of activation coefficients.
+            """
+            # dir
+            spline_grid = ((range_ / (spline_size//2)) // round_to) * round_to
+            return spline_grid
+
+        self.spline_grid = spline_grid_from_range(
+            self.spline_size[0], self.spline_range)
+
+        self.grid = Tensor([self.spline_grid]).to(**self.device_type)
 
         # tensor with locations of spline coefficients. size: (num_activations, size)
         grid_tensor = self.grid_tensor
@@ -77,31 +92,19 @@ class BSplineActivation(nn.Module):
             coefficients.contiguous().view(-1)
         )  # size: (num_activations*size)
 
-        self.spline_size = [self.size]
-        self.spline_range = 4
-        self.spline_grid = [0.0] * len(self.spline_size)
-
-        # a helper function
-        def spline_grid_from_range(spline_size, range_=2, round_to=1e-6):
-            """ Compute spline grid spacing from desired one-side range
-            and the number of activation coefficients.
-            """
-            spline_grid = ((range_ / (spline_size//2)) // round_to) * round_to
-            return spline_grid
-
-        for i in range(len(self.spline_size)):
-            self.spline_grid[i] = spline_grid_from_range(
-                self.spline_size[i], self.spline_range
-            )
         # len(self.spline_size) == 1
 
-    @property
+    @ property
     def device_type(self):
         return dict(device=self.device, dtype=self.dtype)
 
-    @property
+    @ property
     def grid_tensor(self):
         return self.get_grid_tensor(self.size, self.grid)
+
+    @ property
+    def coefficients_vect_(self):
+        return self.coefficients_vect
 
     def get_grid_tensor(self, size_, grid_):
         """Creates a 2D grid tensor of size (num_activations, size)
@@ -172,7 +175,3 @@ class BSplineActivation(nn.Module):
         output = self.reshape_back(output, input_size)
 
         return output
-
-    @property
-    def coefficients_vect_(self):
-        return self.coefficients_vect
